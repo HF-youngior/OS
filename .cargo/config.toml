@@ -1,2 +1,2 @@
-[build]
-rustflags = ["-C", "link-arg=-nostack_protector"]
+# Project-level Cargo configuration is intentionally empty.
+# Experiment-specific target settings live in os/.cargo/config.
