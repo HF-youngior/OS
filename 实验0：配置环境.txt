@@ -61,7 +61,7 @@ curl https://sh.rustup.rs -sSf | sh
 source "$HOME/.cargo/env"
 
 操作系统实验依赖于nightly版本的rust，因此需要安装nightly版本，并将rust默认设置为nightly。
-执行如下命令：
+执行如下命令：source "$HOME/.cargo/env"
 rustup install nightly
 rustup default nightly
 
@@ -69,11 +69,18 @@ rustup default nightly
 vim ~/.cargo/config
 
 文件内容如下：
+（2）切换cargo软件包镜像为tuna
+vim ~/.cargo/config.toml
+
+文件内容如下：
 [source.crates-io]
 replace-with = 'ustc'
 
 [source.ustc]
-registry = "git://mirrors.ustc.edu.cn/crates.io-index"
+registry = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"
+
+[registries.ustc]
+index = "sparse+https://mirrors.ustc.edu.cn/crates.io-index/"
 
 （3）接下来安装一些Rust相关的软件包
 
@@ -84,7 +91,7 @@ rustup component add rust-src
 
 （4）限制rust的版本
 在工作目录下创建一个名为 rust-toolchain 的文件，以限制rust的版本，文件内容如下：
-nightly-2022-10-19
+nightly-2026-05-08
 
 说明：访问工作目录有两种方式：在本地通过~/GardenerOS/目录访问；在容器内通过/mnt/目录访问。
 
