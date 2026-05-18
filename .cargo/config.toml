@@ -1,9 +1,2 @@
 # Project-level Cargo configuration is intentionally empty.
-# Experiment-specific target settings live in os/.cargo/config.
-[build]
-target = "riscv64gc-unknown-none-elf"
-
-[target.riscv64gc-unknown-none-elf]
-rustflags = [
-    "-C", "link-arg=-Tsrc/linker.ld",
-]
+# Experiment-specific target settings live in each crate's .cargo/config.toml.
