@@ -8,28 +8,23 @@ mod lang_items;
 
 use syscall::*;
 
-pub fn write(fd: usize, buf: &[u8]) -> isize {
-    sys_write(fd, buf)
-}
-
-pub fn exit(exit_code: i32) -> isize {
-    sys_exit(exit_code)
-}
+pub fn write(fd: usize, buf: &[u8]) -> isize { sys_write(fd, buf) }
+pub fn exit(exit_code: i32) -> isize { sys_exit(exit_code) }
+pub fn yield_() -> isize { sys_yield() }
+pub fn get_time() -> isize { sys_get_time() }
 
 fn clear_bss() {
-    extern "C" {
+    unsafe extern "C" {
         fn start_bss();
         fn end_bss();
     }
     let start_bss_ptr = start_bss as *const () as usize;
     let end_bss_ptr = end_bss as *const () as usize;
-    (start_bss_ptr..end_bss_ptr).for_each(|a| unsafe {
-        (a as *mut u8).write_volatile(0)
-    });
+    (start_bss_ptr..end_bss_ptr).for_each(|a| unsafe { (a as *mut u8).write_volatile(0) });
 }
 
-#[no_mangle]
-#[link_section = ".text.entry"]
+#[unsafe(no_mangle)]
+#[unsafe(link_section = ".text.entry")]
 pub extern "C" fn _start() -> ! {
     clear_bss();
     exit(main());
@@ -37,8 +32,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 #[linkage = "weak"]
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn main() -> i32 {
     panic!("Cannot find main!");
 }
-pub fn yield_() -> isize { sys_yield() }
