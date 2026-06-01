@@ -19,7 +19,7 @@ fn insert_app_data() -> Result<()> {
             name_with_ext.drain(name_with_ext.find('.').unwrap()..name_with_ext.len());
             name_with_ext
         })
-        .filter(|app| app.contains("write_"))
+        .filter(|app| app.contains("power_") || app.contains("sleep"))
         .collect();
     apps.sort();
 
