@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![no_main]
 
 #[macro_use]
@@ -26,3 +26,4 @@ fn main() -> i32 {
     println!("Test power_5 OK!");
     0
 }
+

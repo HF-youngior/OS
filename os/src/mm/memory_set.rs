@@ -10,13 +10,11 @@ use super::{
     frame_alloc, FrameTracker, PageTable, PageTableEntry, PhysAddr, PhysPageNum, PTEFlags,
     StepByOne, VirtAddr, VirtPageNum, VPNRange,
 };
-use crate::config::{
-    MEMORY_END, PAGE_SIZE, TRAP_CONTEXT, TRAMPOLINE, USER_STACK_SIZE,
-};
+use crate::config::{MEMORY_END, PAGE_SIZE, TRAP_CONTEXT, TRAMPOLINE, USER_STACK_SIZE};
 use crate::sync::UPSafeCell;
 
 pub struct MapArea {
-    vpn_range: VPNRange,
+    pub vpn_range: VPNRange,
     data_frames: BTreeMap<VirtPageNum, FrameTracker>,
     map_type: MapType,
     map_perm: MapPermission,
@@ -39,7 +37,7 @@ bitflags! {
 
 pub struct MemorySet {
     pub page_table: PageTable,
-    areas: Vec<MapArea>,
+    pub areas: Vec<MapArea>,
 }
 
 extern "C" {
@@ -225,6 +223,39 @@ impl MemorySet {
         );
         (memory_set, user_stack_top, elf.header.pt2.entry_point() as usize)
     }
+
+    pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
+        if let Some((idx, area)) = self
+            .areas
+            .iter_mut()
+            .enumerate()
+            .find(|(_, area)| area.vpn_range.get_start() == start_vpn)
+        {
+            area.unmap(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+    }
+
+    pub fn recycle_data_pages(&mut self) {
+        self.areas.clear();
+    }
+
+    pub fn from_existed_user(user_space: &MemorySet) -> MemorySet {
+        let mut memory_set = Self::new_bare();
+        memory_set.map_trampoline();
+        for area in user_space.areas.iter() {
+            let new_area = MapArea::from_another(area);
+            memory_set.push(new_area, None);
+            for vpn in area.vpn_range {
+                let src_ppn = user_space.translate(vpn).unwrap().ppn();
+                let dst_ppn = memory_set.translate(vpn).unwrap().ppn();
+                dst_ppn
+                    .get_bytes_array()
+                    .copy_from_slice(src_ppn.get_bytes_array());
+            }
+        }
+        memory_set
+    }
 }
 
 impl MapArea {
@@ -244,6 +275,15 @@ impl MapArea {
         }
     }
 
+    pub fn from_another(another: &MapArea) -> Self {
+        Self {
+            vpn_range: VPNRange::new(another.vpn_range.get_start(), another.vpn_range.get_end()),
+            data_frames: BTreeMap::new(),
+            map_type: another.map_type,
+            map_perm: another.map_perm,
+        }
+    }
+
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         let ppn: PhysPageNum;
         match self.map_type {
@@ -260,7 +300,6 @@ impl MapArea {
         page_table.map(vpn, ppn, pte_flags);
     }
 
-    #[allow(unused)]
     pub fn unmap_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         if self.map_type == MapType::Framed {
             self.data_frames.remove(&vpn);
@@ -274,7 +313,6 @@ impl MapArea {
         }
     }
 
-    #[allow(unused)]
     pub fn unmap(&mut self, page_table: &mut PageTable) {
         for vpn in self.vpn_range {
             self.unmap_one(page_table, vpn);
@@ -312,16 +350,22 @@ lazy_static! {
 #[allow(unused)]
 pub fn remap_test() {
     let kernel_space = KERNEL_SPACE.exclusive_access();
-    let mid_text: VirtAddr = ((stext as *const () as usize + etext as *const () as usize) / 2).into();
+    let mid_text: VirtAddr =
+        ((stext as *const () as usize + etext as *const () as usize) / 2).into();
     let mid_rodata: VirtAddr =
         ((srodata as *const () as usize + erodata as *const () as usize) / 2).into();
-    let mid_data: VirtAddr = ((sdata as *const () as usize + edata as *const () as usize) / 2).into();
+    let mid_data: VirtAddr =
+        ((sdata as *const () as usize + edata as *const () as usize) / 2).into();
     assert_eq!(
         kernel_space.page_table.translate(mid_text.floor()).unwrap().writable(),
         false
     );
     assert_eq!(
-        kernel_space.page_table.translate(mid_rodata.floor()).unwrap().writable(),
+        kernel_space
+            .page_table
+            .translate(mid_rodata.floor())
+            .unwrap()
+            .writable(),
         false,
     );
     assert_eq!(

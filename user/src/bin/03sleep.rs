@@ -1,4 +1,4 @@
-#![no_std]
+﻿#![no_std]
 #![no_main]
 
 #[macro_use]
@@ -16,3 +16,4 @@ fn main() -> i32 {
     println!("Test sleep OK!");
     0
 }
+
